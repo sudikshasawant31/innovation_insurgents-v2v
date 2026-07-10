@@ -1,348 +1,408 @@
 'use client'
 
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { ArrowRight, Heart, Shield, Zap, TrendingUp, MessageCircle, Brain } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { Navbar } from '@/components/navbar'
+import { getCurrentUser, type DemoUser, updateCurrentUser } from '@/lib/demo-auth'
+import {
+  User,
+  FileText,
+  Calendar,
+  Heart,
+  Settings,
+  LogOut,
+  Trash2,
+  Download,
+  Plus,
+  MapPin,
+  Mail,
+  Phone,
+  ShieldCheck,
+} from 'lucide-react'
 
-const features = [
-  {
-    icon: Shield,
-    title: 'Early Risk Detection',
-    description: 'AI-powered assessment identifies health risks like PCOS, anemia, thyroid conditions, and more.'
-  },
-  {
-    icon: Brain,
-    title: 'Mental Wellness',
-    description: 'Comprehensive mood tracking, stress assessment, and personalized mental health support.'
-  },
-  {
-    icon: TrendingUp,
-    title: 'Personalized Insights',
-    description: 'Get tailored recommendations based on your unique health profile and lifestyle.'
-  },
-  {
-    icon: MessageCircle,
-    title: 'Doctor Reports',
-    description: 'Generate beautiful PDF reports ready to share with your healthcare provider.'
-  },
-  {
-    icon: Zap,
-    title: 'Voice Assistant',
-    description: 'Hands-free health guidance and emergency contact flow with one voice command.'
-  },
-  {
-    icon: Heart,
-    title: 'Holistic Care',
-    description: 'Nutrition tracking, wellness tips, and continuous healthcare companionship.'
-  },
-]
+const tabs = ['overview', 'records', 'appointments', 'settings']
 
-const testimonials = [
-  {
-    name: 'Sarah M.',
-    role: 'Healthcare Professional',
-    text: 'HerGuardian AI transformed how I approach preventive healthcare. The risk assessment is incredibly accurate.'
-  },
-  {
-    name: 'Jessica P.',
-    role: 'Patient',
-    text: 'I love the mental wellness features. The AI-generated reports are perfect for my doctor appointments.'
-  },
-  {
-    name: 'Dr. Priya K.',
-    role: 'Gynecologist',
-    text: 'My patients are more informed and engaged with their health data. Highly recommend to all practitioners.'
-  },
-]
+type RecordItem = {
+  id: string
+  title: string
+  type: string
+  date: string
+  tags: string[]
+}
 
-const stats = [
-  { label: 'Health Conditions Detected', value: '7+' },
-  { label: 'Mental Wellness Assessments', value: 'PHQ-9 & GAD-7' },
-  { label: 'User Satisfaction', value: '98%' },
-]
+type AppointmentItem = {
+  id: string
+  doctor: string
+  specialty: string
+  date: string
+  time: string
+  status: 'upcoming' | 'completed'
+  location: string
+}
 
-export default function Home() {
-  const container = {
-    hidden: { opacity: 0 },
-    show: {
-      opacity: 1,
-      transition: { staggerChildren: 0.1 }
-    }
+function readJson<T>(key: string, fallback: T): T {
+  if (typeof window === 'undefined') return fallback
+  const raw = localStorage.getItem(key)
+  if (!raw) return fallback
+  try {
+    return JSON.parse(raw)
+  } catch {
+    return fallback
+  }
+}
+
+function formatDate(value?: string) {
+  if (!value) return 'Not completed'
+  return new Date(value).toLocaleDateString('en-IN', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  })
+}
+
+function daysAgo(value?: string) {
+  if (!value) return 'Take assessment to update'
+  const diff = Math.max(0, Math.round((Date.now() - new Date(value).getTime()) / 86400000))
+  return diff === 0 ? 'Today' : `${diff} day${diff === 1 ? '' : 's'} ago`
+}
+
+export default function ProfilePage() {
+  const [activeTab, setActiveTab] = useState('overview')
+  const [user, setUser] = useState<DemoUser | null>(null)
+  const [assessment, setAssessment] = useState<any>(null)
+  const [weekly, setWeekly] = useState<any>(null)
+  const [records, setRecords] = useState<RecordItem[]>([])
+  const [appointments, setAppointments] = useState<AppointmentItem[]>([])
+  const [newRecordTitle, setNewRecordTitle] = useState('')
+  const [profileForm, setProfileForm] = useState({ name: '', email: '', phone: '', age: '', city: '' })
+
+  useEffect(() => {
+    const currentUser = getCurrentUser()
+    setUser(currentUser)
+    setProfileForm({
+      name: currentUser?.name || '',
+      email: currentUser?.email || '',
+      phone: currentUser?.phone || '',
+      age: currentUser?.age || '',
+      city: currentUser?.city || '',
+    })
+    setAssessment(readJson('herguardian.latestAssessment', null))
+    setWeekly(readJson('herguardian.latestWeeklyCheckup', null))
+
+    const userId = currentUser?.id || 'guest'
+    setRecords(readJson(`herguardian.records.${userId}`, []))
+    setAppointments(readJson(`herguardian.appointments.${userId}`, []))
+  }, [])
+
+  const userId = user?.id || 'guest'
+  const initials = useMemo(() => {
+    const source = user?.name || user?.email || user?.phone || 'User'
+    return source
+      .split(/[.\s@_+-]+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase())
+      .join('')
+  }, [user])
+
+  const healthScore = assessment?.analysis?.healthScore ?? '--'
+  const healthStatus = assessment?.analysis?.status ?? 'Complete assessment to update'
+  const memberSince = formatDate(user?.createdAt)
+  const lastAssessmentDate = formatDate(assessment?.createdAt)
+
+  const saveRecords = (next: RecordItem[]) => {
+    setRecords(next)
+    localStorage.setItem(`herguardian.records.${userId}`, JSON.stringify(next))
   }
 
-  const item = {
-    hidden: { opacity: 0, y: 20 },
-    show: { opacity: 1, y: 0 }
+  const saveAppointments = (next: AppointmentItem[]) => {
+    setAppointments(next)
+    localStorage.setItem(`herguardian.appointments.${userId}`, JSON.stringify(next))
+  }
+
+  const addRecord = () => {
+    const title = newRecordTitle.trim()
+    if (!title) return
+    saveRecords([
+      {
+        id: crypto.randomUUID(),
+        title,
+        type: 'uploaded',
+        date: new Date().toISOString().slice(0, 10),
+        tags: ['user-added'],
+      },
+      ...records,
+    ])
+    setNewRecordTitle('')
+  }
+
+  const addAppointment = () => {
+    saveAppointments([
+      {
+        id: crypto.randomUUID(),
+        doctor: 'Select doctor from Doctors page',
+        specialty: 'Gynecology',
+        date: new Date().toISOString().slice(0, 10),
+        time: 'To be confirmed',
+        status: 'upcoming',
+        location: user?.city ? `${user.city}, India` : 'Mumbai, India',
+      },
+      ...appointments,
+    ])
+  }
+
+  const saveProfile = () => {
+    if (!user) return
+    const nextUser: DemoUser = {
+      ...user,
+      name: profileForm.name.trim() || user.name,
+      email: profileForm.email.trim().toLowerCase(),
+      phone: profileForm.phone.trim(),
+      age: profileForm.age.trim(),
+      city: profileForm.city.trim() || 'Mumbai',
+    }
+    updateCurrentUser(nextUser)
+    setUser(nextUser)
+  }
+
+  const logout = () => {
+    localStorage.removeItem('herguardian.currentUser')
+    localStorage.removeItem('herguardian.sessionActive')
+    window.location.href = '/login'
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
+    <main className="min-h-screen bg-background">
       <Navbar />
 
-      {/* Hero Section */}
-      <section className="pt-32 pb-20 px-4 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-7xl">
-          <motion.div
-            className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-          >
-            {/* Left Content */}
-            <div>
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.2 }}
-                className="inline-block mb-6 px-4 py-2 rounded-full bg-secondary/10 border border-secondary/20"
-              >
-                <span className="text-sm font-semibold text-secondary">Preventive Healthcare Revolution</span>
-              </motion.div>
+      <div className="mx-auto max-w-7xl px-4 py-8">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8 rounded-xl border border-border bg-card p-8"
+        >
+          <div className="flex flex-col items-center gap-8 md:flex-row">
+            <div className="relative">
+              <div className="flex h-32 w-32 items-center justify-center rounded-full bg-gradient-to-br from-primary to-secondary text-4xl font-bold text-white">
+                {initials || <User className="h-16 w-16" />}
+              </div>
+            </div>
 
-              <motion.h1
-                className="text-5xl md:text-6xl font-bold mb-6 leading-tight"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-              >
-                <span className="bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
-                  Prevent Today.
+            <div className="flex-1 text-center md:text-left">
+              <h1 className="mb-2 text-3xl font-bold">{user?.name || 'No user signed in'}</h1>
+              <p className="mb-4 text-muted-foreground">
+                Age: {user?.age || 'Not set'} | Member since {memberSince}
+              </p>
+              <div className="mb-4 flex flex-wrap justify-center gap-2 md:justify-start">
+                <span className="rounded-full bg-primary/10 px-3 py-1 text-sm text-primary">
+                  {user?.provider ? `${user.provider} login` : 'Guest'}
                 </span>
-                <br />
-                <span className="text-foreground">Empower Tomorrow.</span>
-              </motion.h1>
+                <span className="rounded-full bg-accent/10 px-3 py-1 text-sm text-accent">Local account</span>
+                <span className="rounded-full bg-secondary/10 px-3 py-1 text-sm text-secondary">{user?.role || 'user'}</span>
+              </div>
+              <div className="flex flex-wrap justify-center gap-4 text-sm text-muted-foreground md:justify-start">
+                {user?.email && <span className="inline-flex items-center gap-1"><Mail className="h-4 w-4" />{user.email}</span>}
+                {user?.phone && <span className="inline-flex items-center gap-1"><Phone className="h-4 w-4" />{user.phone}</span>}
+                <span className="inline-flex items-center gap-1"><MapPin className="h-4 w-4" />{user?.city || 'Mumbai'}</span>
+              </div>
+            </div>
 
-              <motion.p
-                className="text-xl text-muted-foreground mb-8 leading-relaxed"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.4 }}
+            <div className="flex flex-col gap-2 md:items-end">
+              <button
+                onClick={() => setActiveTab('settings')}
+                className="rounded-lg border border-border px-6 py-2 transition-colors hover:bg-muted"
               >
-                AI-powered preventive healthcare companion built for women. Early risk detection, personalized guidance, and continuous support for your wellbeing.
-              </motion.p>
+                <Settings className="mr-2 inline h-4 w-4" />
+                Settings
+              </button>
+              <button
+                onClick={logout}
+                className="rounded-lg border border-destructive/20 px-6 py-2 text-destructive transition-colors hover:bg-destructive/10"
+              >
+                <LogOut className="mr-2 inline h-4 w-4" />
+                Logout
+              </button>
+            </div>
+          </div>
+        </motion.div>
 
-              <motion.div
-                className="flex flex-col sm:flex-row gap-4"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5 }}
-              >
-                <Link
-                  href="/assessment"
-                  className="inline-flex items-center justify-center px-8 py-4 rounded-lg bg-gradient-to-r from-primary to-secondary text-primary-foreground font-semibold hover:shadow-lg hover:scale-105 transition-all"
-                >
-                  Start Assessment
-                  <ArrowRight className="ml-2 w-5 h-5" />
-                </Link>
-                <Link
-                  href="#features"
-                  className="inline-flex items-center justify-center px-8 py-4 rounded-lg border border-border bg-background text-foreground font-semibold hover:bg-muted transition-colors"
-                >
-                  Learn More
-                </Link>
-              </motion.div>
+        <div className="mb-8 flex gap-2 overflow-x-auto border-b border-border">
+          {tabs.map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`whitespace-nowrap border-b-2 px-6 py-3 font-semibold capitalize transition-colors ${
+                activeTab === tab ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
 
-              {/* Stats */}
-              <motion.div
-                className="mt-12 grid grid-cols-3 gap-6"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.6 }}
-              >
-                {stats.map((stat, i) => (
-                  <div key={i}>
-                    <p className="text-2xl font-bold text-primary">{stat.value}</p>
-                    <p className="text-sm text-muted-foreground">{stat.label}</p>
+        {activeTab === 'overview' && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-3">
+            <div className="rounded-lg border border-border bg-card p-6">
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="font-semibold">Health Score</h3>
+                <Heart className="h-5 w-5 text-secondary" />
+              </div>
+              <p className="text-4xl font-bold text-primary">{healthScore}</p>
+              <p className="text-sm text-muted-foreground">{healthStatus}</p>
+            </div>
+
+            <div className="rounded-lg border border-border bg-card p-6">
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="font-semibold">Last Assessment</h3>
+                <Calendar className="h-5 w-5 text-accent" />
+              </div>
+              <p className="text-2xl font-bold">{lastAssessmentDate}</p>
+              <p className="text-sm text-muted-foreground">{daysAgo(assessment?.createdAt)}</p>
+            </div>
+
+            <div className="rounded-lg border border-border bg-card p-6">
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="font-semibold">Saved Records</h3>
+                <FileText className="h-5 w-5 text-primary" />
+              </div>
+              <p className="text-4xl font-bold">{records.length}</p>
+              <p className="text-sm text-muted-foreground">User-added medical documents</p>
+            </div>
+          </motion.div>
+        )}
+
+        {activeTab === 'records' && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+            <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <h2 className="text-xl font-bold">Medical Records</h2>
+                <p className="text-sm text-muted-foreground">No fake sample reports are preloaded. Add only real user records here.</p>
+              </div>
+              <div className="flex gap-2">
+                <input
+                  value={newRecordTitle}
+                  onChange={(event) => setNewRecordTitle(event.target.value)}
+                  placeholder="Record title"
+                  className="rounded-lg border border-border bg-background px-3 py-2"
+                />
+                <button onClick={addRecord} className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-primary-foreground">
+                  <Plus className="h-4 w-4" />
+                  Add
+                </button>
+              </div>
+            </div>
+
+            {records.length === 0 ? (
+              <div className="rounded-lg border border-border bg-card p-8 text-center text-muted-foreground">
+                No records added yet.
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {records.map((record) => (
+                  <div key={record.id} className="flex items-center justify-between rounded-lg border border-border bg-card p-6">
+                    <div>
+                      <h3 className="font-semibold">{record.title}</h3>
+                      <p className="mt-1 text-sm text-muted-foreground">{record.date}</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button className="rounded-lg p-2 hover:bg-muted"><Download className="h-4 w-4" /></button>
+                      <button
+                        onClick={() => saveRecords(records.filter((item) => item.id !== record.id))}
+                        className="rounded-lg p-2 text-destructive hover:bg-destructive/10"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
                 ))}
-              </motion.div>
+              </div>
+            )}
+          </motion.div>
+        )}
+
+        {activeTab === 'appointments' && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+            <div className="mb-6 flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-bold">Appointments</h2>
+                <p className="text-sm text-muted-foreground">Only user-created appointments are shown.</p>
+              </div>
+              <button onClick={addAppointment} className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-primary-foreground">
+                <Plus className="h-4 w-4" />
+                Add Appointment
+              </button>
             </div>
 
-            {/* Right Illustration */}
-            <motion.div
-              className="relative h-96 md:h-full rounded-2xl bg-gradient-to-br from-primary/10 to-secondary/10 border border-primary/20 overflow-hidden"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.3, duration: 0.6 }}
-            >
-              <div className="absolute inset-0 flex items-center justify-center">
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
-                  className="w-48 h-48 rounded-full border-2 border-dashed border-primary/30"
-                />
+            {appointments.length === 0 ? (
+              <div className="rounded-lg border border-border bg-card p-8 text-center">
+                <p className="mb-4 text-muted-foreground">No appointments fixed yet.</p>
+                <Link href="/doctors" className="inline-flex rounded-lg bg-primary px-4 py-2 text-primary-foreground">
+                  Find Mumbai gynecologists
+                </Link>
               </div>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <motion.div
-                  animate={{ rotate: -360 }}
-                  transition={{ duration: 15, repeat: Infinity, ease: 'linear' }}
-                  className="w-32 h-32 rounded-full border-2 border-dashed border-secondary/30"
-                />
-              </div>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <Heart className="w-16 h-16 text-primary" fill="currentColor" />
-              </div>
-            </motion.div>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Features Section */}
-      <section id="features" className="py-20 px-4 sm:px-6 lg:px-8 bg-card/50">
-        <div className="mx-auto max-w-7xl">
-          <motion.div
-            className="text-center mb-16"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-          >
-            <h2 className="text-4xl md:text-5xl font-bold mb-4">Comprehensive Health Support</h2>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Everything you need for proactive women&apos;s healthcare in one intelligent platform.
-            </p>
-          </motion.div>
-
-          <motion.div
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
-            variants={container}
-            initial="hidden"
-            whileInView="show"
-            viewport={{ once: true }}
-          >
-            {features.map((feature, i) => {
-              const Icon = feature.icon
-              return (
-                <motion.div
-                  key={i}
-                  variants={item}
-                  className="p-8 rounded-xl border border-border bg-background hover:border-primary/50 hover:shadow-lg transition-all group"
-                >
-                  <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center mb-4 group-hover:from-primary group-hover:to-secondary transition-all">
-                    <Icon className="w-6 h-6 text-primary group-hover:text-primary-foreground transition-colors" />
+            ) : (
+              <div className="space-y-4">
+                {appointments.map((apt) => (
+                  <div key={apt.id} className="rounded-lg border border-border bg-card p-6">
+                    <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
+                      <div>
+                        <h3 className="text-lg font-semibold">{apt.doctor}</h3>
+                        <p className="text-sm text-muted-foreground">{apt.specialty}</p>
+                        <p className="mt-2 text-sm text-muted-foreground">{apt.location}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-semibold">{apt.date}</p>
+                        <p className="text-sm text-muted-foreground">{apt.time}</p>
+                      </div>
+                    </div>
                   </div>
-                  <h3 className="text-xl font-bold mb-2">{feature.title}</h3>
-                  <p className="text-muted-foreground">{feature.description}</p>
-                </motion.div>
-              )
-            })}
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Testimonials Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-7xl">
-          <motion.div
-            className="text-center mb-16"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-          >
-            <h2 className="text-4xl md:text-5xl font-bold mb-4">Trusted by Women & Professionals</h2>
-            <p className="text-xl text-muted-foreground">
-              Join thousands who are taking control of their preventive healthcare.
-            </p>
-          </motion.div>
-
-          <motion.div
-            className="grid grid-cols-1 md:grid-cols-3 gap-8"
-            variants={container}
-            initial="hidden"
-            whileInView="show"
-            viewport={{ once: true }}
-          >
-            {testimonials.map((testimonial, i) => (
-              <motion.div
-                key={i}
-                variants={item}
-                className="p-8 rounded-xl border border-border bg-card hover:shadow-lg transition-all"
-              >
-                <div className="flex gap-1 mb-4">
-                  {[...Array(5)].map((_, j) => (
-                    <span key={j} className="text-secondary text-xl">★</span>
-                  ))}
-                </div>
-                <p className="text-foreground mb-6 italic">&ldquo;{testimonial.text}&rdquo;</p>
-                <div>
-                  <p className="font-semibold text-foreground">{testimonial.name}</p>
-                  <p className="text-sm text-muted-foreground">{testimonial.role}</p>
-                </div>
-              </motion.div>
-            ))}
-          </motion.div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-r from-primary to-secondary">
-        <div className="mx-auto max-w-4xl text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-          >
-            <h2 className="text-4xl md:text-5xl font-bold text-primary-foreground mb-6">
-              Ready to Take Control?
-            </h2>
-            <p className="text-xl text-primary-foreground/90 mb-8">
-              Start your preventive health journey today. Early detection saves lives.
-            </p>
-            <Link
-              href="/assessment"
-              className="inline-flex items-center justify-center px-8 py-4 rounded-lg bg-background text-primary font-semibold hover:shadow-lg hover:scale-105 transition-all"
-            >
-              Begin Assessment
-              <ArrowRight className="ml-2 w-5 h-5" />
-            </Link>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="bg-card border-t border-border px-4 sm:px-6 lg:px-8 py-12">
-        <div className="mx-auto max-w-7xl">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
-            <div>
-              <div className="flex items-center gap-2 mb-4">
-                <Heart className="w-6 h-6 text-primary" fill="currentColor" />
-                <span className="font-bold">HerGuardian AI</span>
+                ))}
               </div>
-              <p className="text-sm text-muted-foreground">
-                Preventive women&apos;s healthcare powered by artificial intelligence.
-              </p>
+            )}
+          </motion.div>
+        )}
+
+        {activeTab === 'settings' && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+            <div className="rounded-lg border border-border bg-card p-6">
+              <h3 className="mb-4 font-semibold">Personal Details</h3>
+              <div className="grid gap-4 md:grid-cols-2">
+                {[
+                  ['name', 'Full name', 'text'],
+                  ['email', 'Email address', 'email'],
+                  ['phone', 'Phone number', 'tel'],
+                  ['age', 'Age', 'number'],
+                  ['city', 'City', 'text'],
+                ].map(([key, label, type]) => (
+                  <div key={key}>
+                    <label className="mb-2 block text-sm font-medium">{label}</label>
+                    <input
+                      type={type}
+                      value={profileForm[key as keyof typeof profileForm]}
+                      onChange={(event) => setProfileForm({ ...profileForm, [key]: event.target.value })}
+                      className="w-full rounded-lg border border-border bg-background px-4 py-3 outline-none focus:border-primary"
+                    />
+                  </div>
+                ))}
+              </div>
+              <button onClick={saveProfile} className="mt-4 rounded-lg bg-primary px-5 py-2 font-semibold text-primary-foreground">
+                Save Details
+              </button>
             </div>
-            <div>
-              <h4 className="font-semibold mb-4">Product</h4>
-              <ul className="space-y-2 text-sm">
-                <li><Link href="/dashboard" className="text-muted-foreground hover:text-foreground transition-colors">Dashboard</Link></li>
-                <li><Link href="/assessment" className="text-muted-foreground hover:text-foreground transition-colors">Assessment</Link></li>
-                <li><Link href="/reports" className="text-muted-foreground hover:text-foreground transition-colors">Reports</Link></li>
-              </ul>
+
+            <div className="rounded-lg border border-border bg-card p-6">
+              <h3 className="mb-4 font-semibold">Account Security</h3>
+              <div className="space-y-3 text-sm">
+                <p className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-accent" />Login ID: {user?.id || 'Not signed in'}</p>
+                <p>Provider: {user?.provider || 'None'}</p>
+                <p>Verification: Local demo account. No OTP or confirmation email has been sent.</p>
+                <p>Weekly PHQ-9: {weekly?.phq?.total ?? 'Not completed'} {weekly?.phq?.severity ? `(${weekly.phq.severity})` : ''}</p>
+              </div>
             </div>
-            <div>
-              <h4 className="font-semibold mb-4">Company</h4>
-              <ul className="space-y-2 text-sm">
-                <li><a href="#" className="text-muted-foreground hover:text-foreground transition-colors">About</a></li>
-                <li><a href="#" className="text-muted-foreground hover:text-foreground transition-colors">Blog</a></li>
-                <li><a href="#" className="text-muted-foreground hover:text-foreground transition-colors">Careers</a></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-4">Legal</h4>
-              <ul className="space-y-2 text-sm">
-                <li><a href="#" className="text-muted-foreground hover:text-foreground transition-colors">Privacy</a></li>
-                <li><a href="#" className="text-muted-foreground hover:text-foreground transition-colors">Terms</a></li>
-                <li><a href="#" className="text-muted-foreground hover:text-foreground transition-colors">Contact</a></li>
-              </ul>
-            </div>
-          </div>
-          <div className="border-t border-border pt-8 text-center text-sm text-muted-foreground">
-            <p>&copy; 2026 HerGuardian AI. All rights reserved. Built with precision and care.</p>
-          </div>
-        </div>
-      </footer>
+          </motion.div>
+        )}
+      </div>
     </main>
   )
 }
