@@ -52,20 +52,22 @@ HerGuardian AI combines preventive healthcare, education, reminders, AI support,
 
 The app provides a central dashboard where the user can access different healthcare modules. Users can complete assessments, track symptoms, view recommendations, book appointments, browse testing agencies, and generate reports.
 
-The chatbot provides general educational support and helps users understand symptoms, tests, and next steps. It does not provide medical diagnosis.
+The chatbot provides general educational support and helps users understand symptoms, tests, and next steps.
 
 Health information can be stored using PostgreSQL through Neon. The app uses Drizzle ORM for database tables such as users, assessments, mood entries, appointments, invoices, medical records, nutrition logs, chat history, and emergency alerts.
 
 ### Medical Safety
 
-HerGuardian AI is designed for screening, education, and preventive support only.
+HerGuardian AI is designed to provide screening support, health education, preventive guidance, and timely awareness for women’s wellbeing.
 
-It does not:
-- Confirm cancer, osteoporosis, depression, PCOS, or any medical condition
-- Replace doctors or emergency services
-- Recommend prescription medicines or dosage changes
+The platform focuses on:
+- Helping users understand possible health patterns and risk signals
+- Encouraging early conversations with qualified healthcare professionals
+- Supporting safer next steps through reports, reminders, and appointment booking
+- Promoting preventive care, health literacy, and emergency awareness
+- Keeping medical decisions with certified doctors and healthcare providers
 
-When serious symptoms or red flags are detected, the app recommends professional care, emergency support, or booking a doctor appointment.
+When serious symptoms or red flags are detected, HerGuardian AI gently guides the user toward professional care, emergency support, or booking a doctor appointment through the platform.
 
 ### Payment Flow
 
