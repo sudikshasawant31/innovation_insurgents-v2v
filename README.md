@@ -34,6 +34,9 @@
 - **ORM:** Drizzle ORM
 - **Authentication:** Better Auth / custom auth routes
 - **AI Chatbot:** OpenAI / Gemini / Puter.js-compatible chatbot setup
+- **AI Development Assistant:** OpenAI Codex for planning, coding, debugging, UI improvements, README writing, and deployment guidance
+- **AI Content Support:** ChatGPT-style AI assistance for structuring health education content, demo script writing, feature documentation, and project explanation
+- **AI Health Guidance Layer:** Prompt-based AI chatbot flow for educational health support and safer next-step suggestions
 - **SMS, OTP & Calling:** Twilio
 - **Payments:** Razorpay Checkout
 - **Deployment:** Vercel
@@ -78,3 +81,19 @@ Supported payment options include:
 - UPI ID / QR
 - Net banking
 - Debit and credit cards
+
+### How We Coordinated With AI Tools
+
+AI tools were used throughout the project as a development and planning assistant. OpenAI Codex helped us understand the existing code structure, debug errors, improve UI/UX, add new modules, fix authentication issues, integrate payment flow, prepare deployment steps, and generate project documentation.
+
+We used AI support in the following ways:
+
+- **Feature Planning:** AI helped break the platform into clear modules such as dashboard, assessments, doctors, weekly checkup, health calendar, testing agencies, female health facts, chatbot, support, and wellness preventive care.
+- **Code Development:** AI assisted in creating and updating Next.js pages, API routes, UI components, forms, charts, reports, and navigation flows.
+- **Debugging:** AI helped fix build errors, missing dependencies, incorrect imports, broken buttons, Razorpay payment issues, database setup problems, and deployment configuration.
+- **UI/UX Improvements:** AI helped redesign the interface with a more premium healthcare look, light/dark mode, better layouts, visual assets, and more engaging wellness sections.
+- **Health Content Structuring:** AI helped organize educational content about PCOS, menopause, menstrual health, mental wellness, reproductive health, nutrition, bone health, and preventive care.
+- **Safety Language:** AI helped frame medical safety content in a positive way, making it clear that HerGuardian AI supports awareness, screening, reports, and professional consultation.
+- **Demo and Documentation:** AI helped prepare the GitHub README, project explanation, deployment instructions, environment variable setup, and video demo script.
+
+AI was used as a collaborative assistant, while the final project decisions, testing, feature selection, and implementation direction were handled by the team.
