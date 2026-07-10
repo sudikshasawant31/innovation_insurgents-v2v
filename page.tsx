@@ -1,408 +1,159 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
-import Link from 'next/link'
-import { motion } from 'framer-motion'
+import { useState } from 'react'
 import { Navbar } from '@/components/navbar'
-import { getCurrentUser, type DemoUser, updateCurrentUser } from '@/lib/demo-auth'
-import {
-  User,
-  FileText,
-  Calendar,
-  Heart,
-  Settings,
-  LogOut,
-  Trash2,
-  Download,
-  Plus,
-  MapPin,
-  Mail,
-  Phone,
-  ShieldCheck,
-} from 'lucide-react'
+import { BookOpen, ExternalLink, Film, Sparkles } from 'lucide-react'
 
-const tabs = ['overview', 'records', 'appointments', 'settings']
+const videos = [
+  'mQDe9UOoLFY',
+  'pZX8ikmWvEU',
+  'yWoCgYevgVI',
+  'F6JBFWrEvFc',
+  '8vtsuqRhxjQ',
+  'wY44LKLysHg',
+  'WNkxc6M6Rxk',
+  'LIsYbDCMfDc',
+  'FnvoU0-wcy0',
+  'Mc5iK0AtGNc',
+  'q3I0erDeh5Y',
+  '37BO0eQhFA8',
+  'h1tvgmgM-ew',
+]
 
-type RecordItem = {
-  id: string
-  title: string
-  type: string
-  date: string
-  tags: string[]
-}
+const articles = [
+  ['WHO', 'Polycystic ovary syndrome fact sheet', 'https://www.who.int/news-room/fact-sheets/detail/polycystic-ovary-syndrome'],
+  ['Mayo Clinic', 'PCOS diagnosis and treatment', 'https://www.mayoclinic.org/diseases-conditions/pcos/diagnosis-treatment/drc-20353443'],
+  ['Cleveland Clinic', 'PCOS overview', 'https://my.clevelandclinic.org/health/diseases/8316-polycystic-ovary-syndrome-pcos'],
+  ['Johns Hopkins', 'Polycystic ovary syndrome', 'https://www.hopkinsmedicine.org/health/conditions-and-diseases/polycystic-ovary-syndrome-pcos'],
+  ['WHO', 'Menopause fact sheet', 'https://www.who.int/news-room/fact-sheets/detail/menopause'],
+  ['NCBI', 'Menopause clinical overview', 'https://www.ncbi.nlm.nih.gov/books/NBK507826/'],
+  ['MedlinePlus', 'Menopause information', 'https://medlineplus.gov/menopause.html'],
+  ['WomensHealth.gov', 'Menstrual cycle', 'https://womenshealth.gov/menstrual-cycle'],
+  ['NHS', 'Periods', 'https://www.nhs.uk/conditions/periods/'],
+  ['Mayo Clinic', 'Menstrual cramps', 'https://www.mayoclinic.org/diseases-conditions/menstrual-cramps/symptoms-causes/syc-20374938'],
+  ['NHS', 'Period pain', 'https://www.nhs.uk/symptoms/period-pain/'],
+  ['WHO', 'Mental health', 'https://www.who.int/health-topics/mental-health'],
+  ['SAMHSA', 'Mental health and support', 'https://www.samhsa.gov/'],
+  ['NIMH', 'Women and mental health', 'https://www.nimh.nih.gov/health/topics/women-and-mental-health'],
+  ['WomensHealth.gov', 'Reproductive health', 'https://www.womenshealth.gov/a-z-topics/reproductive-health'],
+  ['Cleveland Clinic', 'Female reproductive system', 'https://my.clevelandclinic.org/health/body/9118-female-reproductive-system'],
+  ['PMC', 'Women health research article', 'https://pmc.ncbi.nlm.nih.gov/articles/PMC9851410/'],
+  ['Health.com', 'Postpartum depression treatment', 'https://www.health.com/postpartum-depression-treatment-8740347'],
+  ['AP News', 'Women health news update', 'https://apnews.com/article/79044a524a59810b23422c5b24b3b596'],
+]
 
-type AppointmentItem = {
-  id: string
-  doctor: string
-  specialty: string
-  date: string
-  time: string
-  status: 'upcoming' | 'completed'
-  location: string
-}
+const facts = [
+  ['Preventive Healthcare', 'Women make up nearly 49.7% of the world population.', 'Global health programs need women-centered design.'],
+  ['Preventive Healthcare', 'Women generally have a higher average life expectancy than men globally.', 'Longer life also means preventive screening and bone health matter.'],
+  ['Menstrual Health', 'Hormonal changes during the menstrual cycle can influence mood, energy, sleep, and appetite.', 'Tracking symptoms can help users understand patterns.'],
+  ['Menstrual Health', 'An average woman experiences around 450 to 500 menstrual cycles in her lifetime.', 'Cycle awareness supports earlier detection of irregularity.'],
+  ['Menopause', 'Women are at a higher risk of osteoporosis, especially after menopause.', 'Calcium, vitamin D, and strength training are important.'],
+  ['Nutrition', 'Iron deficiency anemia is one of the most common nutritional deficiencies among women worldwide.', 'Fatigue and weakness can be signs to discuss with a clinician.'],
+  ['Menstrual Health', 'Regular physical activity can reduce menstrual cramps and improve mood.', 'Even walking and stretching can help many users.'],
+  ['Mental Health', 'Poor sleep can affect hormone balance, stress levels, and menstrual health.', 'Sleep logs can be useful alongside mood tracking.'],
+  ['Pregnancy & Postpartum', 'Postpartum depression is a medical condition that can be treated with support and care.', 'Early support can protect both mother and baby.'],
+  ['Nutrition', 'Staying hydrated can help reduce headaches, fatigue, and menstrual discomfort.', 'Hydration reminders fit naturally into weekly checkups.'],
+  ['Mental Health', 'Stress management techniques such as meditation and exercise can improve reproductive and mental health.', 'Small daily habits are easier to sustain.'],
+  ['Nutrition', 'Foods rich in iron, calcium, folate, and vitamin D are especially important for women health.', 'Personalized nutrition tips can make care practical.'],
+  ['Preventive Healthcare', 'Regular preventive checkups help detect health conditions earlier and improve outcomes.', 'This is why health calendars and reminders matter.'],
+  ['Menopause', 'Menopause is natural and usually occurs between ages 45 and 55.', 'Education can reduce fear and stigma.'],
+  ['Mental Health', 'Women are more likely than men to experience anxiety and depression.', 'Mental health support should be easy to reach.'],
+  ['Preventive Healthcare', 'Just 30 minutes of moderate exercise daily can improve heart health, bone strength, and mood.', 'Activity tracking can turn advice into action.'],
+  ['Pregnancy & Postpartum', 'Folic acid before and during pregnancy helps support healthy fetal development.', 'Preconception care is part of preventive health.'],
+  ['Preventive Healthcare', 'Early detection improves management of PCOS, thyroid disorders, and anemia.', 'Screening plus follow-up is more useful than prediction alone.'],
+]
 
-function readJson<T>(key: string, fallback: T): T {
-  if (typeof window === 'undefined') return fallback
-  const raw = localStorage.getItem(key)
-  if (!raw) return fallback
-  try {
-    return JSON.parse(raw)
-  } catch {
-    return fallback
-  }
-}
+const categories = ['All', 'Mental Health', 'Menstrual Health', 'Nutrition', 'Pregnancy & Postpartum', 'Menopause', 'Preventive Healthcare']
 
-function formatDate(value?: string) {
-  if (!value) return 'Not completed'
-  return new Date(value).toLocaleDateString('en-IN', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  })
-}
-
-function daysAgo(value?: string) {
-  if (!value) return 'Take assessment to update'
-  const diff = Math.max(0, Math.round((Date.now() - new Date(value).getTime()) / 86400000))
-  return diff === 0 ? 'Today' : `${diff} day${diff === 1 ? '' : 's'} ago`
-}
-
-export default function ProfilePage() {
-  const [activeTab, setActiveTab] = useState('overview')
-  const [user, setUser] = useState<DemoUser | null>(null)
-  const [assessment, setAssessment] = useState<any>(null)
-  const [weekly, setWeekly] = useState<any>(null)
-  const [records, setRecords] = useState<RecordItem[]>([])
-  const [appointments, setAppointments] = useState<AppointmentItem[]>([])
-  const [newRecordTitle, setNewRecordTitle] = useState('')
-  const [profileForm, setProfileForm] = useState({ name: '', email: '', phone: '', age: '', city: '' })
-
-  useEffect(() => {
-    const currentUser = getCurrentUser()
-    setUser(currentUser)
-    setProfileForm({
-      name: currentUser?.name || '',
-      email: currentUser?.email || '',
-      phone: currentUser?.phone || '',
-      age: currentUser?.age || '',
-      city: currentUser?.city || '',
-    })
-    setAssessment(readJson('herguardian.latestAssessment', null))
-    setWeekly(readJson('herguardian.latestWeeklyCheckup', null))
-
-    const userId = currentUser?.id || 'guest'
-    setRecords(readJson(`herguardian.records.${userId}`, []))
-    setAppointments(readJson(`herguardian.appointments.${userId}`, []))
-  }, [])
-
-  const userId = user?.id || 'guest'
-  const initials = useMemo(() => {
-    const source = user?.name || user?.email || user?.phone || 'User'
-    return source
-      .split(/[.\s@_+-]+/)
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((part) => part[0]?.toUpperCase())
-      .join('')
-  }, [user])
-
-  const healthScore = assessment?.analysis?.healthScore ?? '--'
-  const healthStatus = assessment?.analysis?.status ?? 'Complete assessment to update'
-  const memberSince = formatDate(user?.createdAt)
-  const lastAssessmentDate = formatDate(assessment?.createdAt)
-
-  const saveRecords = (next: RecordItem[]) => {
-    setRecords(next)
-    localStorage.setItem(`herguardian.records.${userId}`, JSON.stringify(next))
-  }
-
-  const saveAppointments = (next: AppointmentItem[]) => {
-    setAppointments(next)
-    localStorage.setItem(`herguardian.appointments.${userId}`, JSON.stringify(next))
-  }
-
-  const addRecord = () => {
-    const title = newRecordTitle.trim()
-    if (!title) return
-    saveRecords([
-      {
-        id: crypto.randomUUID(),
-        title,
-        type: 'uploaded',
-        date: new Date().toISOString().slice(0, 10),
-        tags: ['user-added'],
-      },
-      ...records,
-    ])
-    setNewRecordTitle('')
-  }
-
-  const addAppointment = () => {
-    saveAppointments([
-      {
-        id: crypto.randomUUID(),
-        doctor: 'Select doctor from Doctors page',
-        specialty: 'Gynecology',
-        date: new Date().toISOString().slice(0, 10),
-        time: 'To be confirmed',
-        status: 'upcoming',
-        location: user?.city ? `${user.city}, India` : 'Mumbai, India',
-      },
-      ...appointments,
-    ])
-  }
-
-  const saveProfile = () => {
-    if (!user) return
-    const nextUser: DemoUser = {
-      ...user,
-      name: profileForm.name.trim() || user.name,
-      email: profileForm.email.trim().toLowerCase(),
-      phone: profileForm.phone.trim(),
-      age: profileForm.age.trim(),
-      city: profileForm.city.trim() || 'Mumbai',
-    }
-    updateCurrentUser(nextUser)
-    setUser(nextUser)
-  }
-
-  const logout = () => {
-    localStorage.removeItem('herguardian.currentUser')
-    localStorage.removeItem('herguardian.sessionActive')
-    window.location.href = '/login'
-  }
+export default function FemaleHealthFactsPage() {
+  const [category, setCategory] = useState('All')
+  const visibleFacts = category === 'All' ? facts : facts.filter(([factCategory]) => factCategory === category)
 
   return (
     <main className="min-h-screen bg-background">
       <Navbar />
-
-      <div className="mx-auto max-w-7xl px-4 py-8">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-8 rounded-xl border border-border bg-card p-8"
-        >
-          <div className="flex flex-col items-center gap-8 md:flex-row">
-            <div className="relative">
-              <div className="flex h-32 w-32 items-center justify-center rounded-full bg-gradient-to-br from-primary to-secondary text-4xl font-bold text-white">
-                {initials || <User className="h-16 w-16" />}
-              </div>
-            </div>
-
-            <div className="flex-1 text-center md:text-left">
-              <h1 className="mb-2 text-3xl font-bold">{user?.name || 'No user signed in'}</h1>
-              <p className="mb-4 text-muted-foreground">
-                Age: {user?.age || 'Not set'} | Member since {memberSince}
-              </p>
-              <div className="mb-4 flex flex-wrap justify-center gap-2 md:justify-start">
-                <span className="rounded-full bg-primary/10 px-3 py-1 text-sm text-primary">
-                  {user?.provider ? `${user.provider} login` : 'Guest'}
-                </span>
-                <span className="rounded-full bg-accent/10 px-3 py-1 text-sm text-accent">Local account</span>
-                <span className="rounded-full bg-secondary/10 px-3 py-1 text-sm text-secondary">{user?.role || 'user'}</span>
-              </div>
-              <div className="flex flex-wrap justify-center gap-4 text-sm text-muted-foreground md:justify-start">
-                {user?.email && <span className="inline-flex items-center gap-1"><Mail className="h-4 w-4" />{user.email}</span>}
-                {user?.phone && <span className="inline-flex items-center gap-1"><Phone className="h-4 w-4" />{user.phone}</span>}
-                <span className="inline-flex items-center gap-1"><MapPin className="h-4 w-4" />{user?.city || 'Mumbai'}</span>
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-2 md:items-end">
-              <button
-                onClick={() => setActiveTab('settings')}
-                className="rounded-lg border border-border px-6 py-2 transition-colors hover:bg-muted"
-              >
-                <Settings className="mr-2 inline h-4 w-4" />
-                Settings
-              </button>
-              <button
-                onClick={logout}
-                className="rounded-lg border border-destructive/20 px-6 py-2 text-destructive transition-colors hover:bg-destructive/10"
-              >
-                <LogOut className="mr-2 inline h-4 w-4" />
-                Logout
-              </button>
-            </div>
-          </div>
-        </motion.div>
-
-        <div className="mb-8 flex gap-2 overflow-x-auto border-b border-border">
-          {tabs.map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`whitespace-nowrap border-b-2 px-6 py-3 font-semibold capitalize transition-colors ${
-                activeTab === tab ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              {tab}
-            </button>
-          ))}
+      <section className="mx-auto max-w-7xl px-4 pb-16 pt-28">
+        <div className="mb-8">
+          <p className="text-sm font-semibold uppercase tracking-wide text-primary">Facts about female health</p>
+          <h1 className="mt-2 text-4xl font-bold">Learn with videos, articles, and flip cards</h1>
+          <p className="mt-3 max-w-3xl text-muted-foreground">
+            Educational resources for PCOS, periods, menopause, mental health, reproductive health, and preventive care.
+          </p>
         </div>
 
-        {activeTab === 'overview' && (
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-3">
-            <div className="rounded-lg border border-border bg-card p-6">
-              <div className="mb-4 flex items-center justify-between">
-                <h3 className="font-semibold">Health Score</h3>
-                <Heart className="h-5 w-5 text-secondary" />
-              </div>
-              <p className="text-4xl font-bold text-primary">{healthScore}</p>
-              <p className="text-sm text-muted-foreground">{healthStatus}</p>
-            </div>
-
-            <div className="rounded-lg border border-border bg-card p-6">
-              <div className="mb-4 flex items-center justify-between">
-                <h3 className="font-semibold">Last Assessment</h3>
-                <Calendar className="h-5 w-5 text-accent" />
-              </div>
-              <p className="text-2xl font-bold">{lastAssessmentDate}</p>
-              <p className="text-sm text-muted-foreground">{daysAgo(assessment?.createdAt)}</p>
-            </div>
-
-            <div className="rounded-lg border border-border bg-card p-6">
-              <div className="mb-4 flex items-center justify-between">
-                <h3 className="font-semibold">Saved Records</h3>
-                <FileText className="h-5 w-5 text-primary" />
-              </div>
-              <p className="text-4xl font-bold">{records.length}</p>
-              <p className="text-sm text-muted-foreground">User-added medical documents</p>
-            </div>
-          </motion.div>
-        )}
-
-        {activeTab === 'records' && (
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-            <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-              <div>
-                <h2 className="text-xl font-bold">Medical Records</h2>
-                <p className="text-sm text-muted-foreground">No fake sample reports are preloaded. Add only real user records here.</p>
-              </div>
-              <div className="flex gap-2">
-                <input
-                  value={newRecordTitle}
-                  onChange={(event) => setNewRecordTitle(event.target.value)}
-                  placeholder="Record title"
-                  className="rounded-lg border border-border bg-background px-3 py-2"
-                />
-                <button onClick={addRecord} className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-primary-foreground">
-                  <Plus className="h-4 w-4" />
-                  Add
-                </button>
-              </div>
-            </div>
-
-            {records.length === 0 ? (
-              <div className="rounded-lg border border-border bg-card p-8 text-center text-muted-foreground">
-                No records added yet.
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {records.map((record) => (
-                  <div key={record.id} className="flex items-center justify-between rounded-lg border border-border bg-card p-6">
-                    <div>
-                      <h3 className="font-semibold">{record.title}</h3>
-                      <p className="mt-1 text-sm text-muted-foreground">{record.date}</p>
-                    </div>
-                    <div className="flex gap-2">
-                      <button className="rounded-lg p-2 hover:bg-muted"><Download className="h-4 w-4" /></button>
-                      <button
-                        onClick={() => saveRecords(records.filter((item) => item.id !== record.id))}
-                        className="rounded-lg p-2 text-destructive hover:bg-destructive/10"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </motion.div>
-        )}
-
-        {activeTab === 'appointments' && (
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-            <div className="mb-6 flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-bold">Appointments</h2>
-                <p className="text-sm text-muted-foreground">Only user-created appointments are shown.</p>
-              </div>
-              <button onClick={addAppointment} className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-primary-foreground">
-                <Plus className="h-4 w-4" />
-                Add Appointment
+        <section className="mb-10">
+          <div className="mb-4 flex items-center gap-2">
+            <Sparkles className="h-6 w-6 text-secondary" />
+            <h2 className="text-2xl font-bold">Did You Know?</h2>
+          </div>
+          <div className="mb-5 flex flex-wrap gap-2">
+            {categories.map((item) => (
+              <button key={item} onClick={() => setCategory(item)} className={`rounded-full px-4 py-2 text-sm font-semibold ${category === item ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground'}`}>
+                {item}
               </button>
-            </div>
-
-            {appointments.length === 0 ? (
-              <div className="rounded-lg border border-border bg-card p-8 text-center">
-                <p className="mb-4 text-muted-foreground">No appointments fixed yet.</p>
-                <Link href="/doctors" className="inline-flex rounded-lg bg-primary px-4 py-2 text-primary-foreground">
-                  Find Mumbai gynecologists
-                </Link>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {appointments.map((apt) => (
-                  <div key={apt.id} className="rounded-lg border border-border bg-card p-6">
-                    <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
-                      <div>
-                        <h3 className="text-lg font-semibold">{apt.doctor}</h3>
-                        <p className="text-sm text-muted-foreground">{apt.specialty}</p>
-                        <p className="mt-2 text-sm text-muted-foreground">{apt.location}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-semibold">{apt.date}</p>
-                        <p className="text-sm text-muted-foreground">{apt.time}</p>
-                      </div>
-                    </div>
+            ))}
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {visibleFacts.map(([factCategory, front, back]) => (
+              <div key={front} className="flip-card min-h-48">
+                <div className="flip-card-inner">
+                  <div className="flip-card-face rounded-xl border border-border bg-card p-5">
+                    <p className="mb-3 text-sm font-semibold text-primary">{factCategory}</p>
+                    <h3 className="text-xl font-bold">{front}</h3>
+                    <p className="mt-4 text-sm text-muted-foreground">Hover to learn why it matters.</p>
                   </div>
-                ))}
-              </div>
-            )}
-          </motion.div>
-        )}
-
-        {activeTab === 'settings' && (
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-            <div className="rounded-lg border border-border bg-card p-6">
-              <h3 className="mb-4 font-semibold">Personal Details</h3>
-              <div className="grid gap-4 md:grid-cols-2">
-                {[
-                  ['name', 'Full name', 'text'],
-                  ['email', 'Email address', 'email'],
-                  ['phone', 'Phone number', 'tel'],
-                  ['age', 'Age', 'number'],
-                  ['city', 'City', 'text'],
-                ].map(([key, label, type]) => (
-                  <div key={key}>
-                    <label className="mb-2 block text-sm font-medium">{label}</label>
-                    <input
-                      type={type}
-                      value={profileForm[key as keyof typeof profileForm]}
-                      onChange={(event) => setProfileForm({ ...profileForm, [key]: event.target.value })}
-                      className="w-full rounded-lg border border-border bg-background px-4 py-3 outline-none focus:border-primary"
-                    />
+                  <div className="flip-card-face flip-card-back rounded-xl border border-primary/30 bg-primary p-5 text-primary-foreground">
+                    <p className="mb-3 text-sm font-semibold opacity-80">{factCategory}</p>
+                    <p className="text-lg font-semibold">{back}</p>
                   </div>
-                ))}
+                </div>
               </div>
-              <button onClick={saveProfile} className="mt-4 rounded-lg bg-primary px-5 py-2 font-semibold text-primary-foreground">
-                Save Details
-              </button>
-            </div>
+            ))}
+          </div>
+        </section>
 
-            <div className="rounded-lg border border-border bg-card p-6">
-              <h3 className="mb-4 font-semibold">Account Security</h3>
-              <div className="space-y-3 text-sm">
-                <p className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-accent" />Login ID: {user?.id || 'Not signed in'}</p>
-                <p>Provider: {user?.provider || 'None'}</p>
-                <p>Verification: Local demo account. No OTP or confirmation email has been sent.</p>
-                <p>Weekly PHQ-9: {weekly?.phq?.total ?? 'Not completed'} {weekly?.phq?.severity ? `(${weekly.phq.severity})` : ''}</p>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </div>
+        <section className="mb-10">
+          <div className="mb-4 flex items-center gap-2">
+            <Film className="h-6 w-6 text-accent" />
+            <h2 className="text-2xl font-bold">Video library</h2>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {videos.map((id, index) => (
+              <a key={id} href={`https://youtu.be/${id}`} target="_blank" rel="noreferrer" className="overflow-hidden rounded-xl border border-border bg-card transition-transform hover:-translate-y-1">
+                <img src={`https://img.youtube.com/vi/${id}/hqdefault.jpg`} alt={`Female health video ${index + 1}`} className="h-48 w-full object-cover" />
+                <div className="p-4">
+                  <p className="text-sm font-semibold text-primary">YouTube video {index + 1}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">Tap to watch the educational video.</p>
+                </div>
+              </a>
+            ))}
+          </div>
+        </section>
+
+        <section>
+          <div className="mb-4 flex items-center gap-2">
+            <BookOpen className="h-6 w-6 text-primary" />
+            <h2 className="text-2xl font-bold">Trusted articles</h2>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {articles.map(([source, title, url]) => {
+              const host = new URL(url).hostname
+              return (
+                <a key={url} href={url} target="_blank" rel="noreferrer" className="rounded-xl border border-border bg-card p-5 transition-transform hover:-translate-y-1">
+                  <div className="mb-4 flex h-28 items-center justify-center rounded-lg bg-gradient-to-br from-primary/15 via-secondary/10 to-accent/15">
+                    <img src={`https://www.google.com/s2/favicons?domain=${host}&sz=128`} alt={`${source} icon`} className="h-16 w-16 rounded-lg" />
+                  </div>
+                  <p className="text-sm font-semibold text-primary">{source}</p>
+                  <h3 className="mt-1 font-bold">{title}</h3>
+                  <p className="mt-3 inline-flex items-center gap-1 text-sm text-muted-foreground">
+                    Open article <ExternalLink className="h-3 w-3" />
+                  </p>
+                </a>
+              )
+            })}
+          </div>
+        </section>
+      </section>
     </main>
   )
 }
